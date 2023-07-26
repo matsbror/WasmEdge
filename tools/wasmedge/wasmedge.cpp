@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2019-2022 Second State INC
 
 #include "wasmedge/wasmedge.h"
+#include "timestamps.h"
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__WIN32__) ||                \
     defined(__TOS_WIN__) || defined(__WINDOWS__)
@@ -15,6 +16,11 @@ int wmain(int Argc, const wchar_t *Argv[]) {
 }
 #else
 int main(int Argc, const char *Argv[]) {
+
+    timestamp_t start_time = timestamp();
+    print_timestamp("wasmedge start", start_time);
+
+
   return WasmEdge_Driver_UniTool(Argc, Argv);
 }
 #endif
