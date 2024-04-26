@@ -25,8 +25,7 @@ std::atomic_uint handlerCount = 0;
 thread_local Fault *localHandler = nullptr;
 
 #if defined(SA_SIGINFO)
-[[noreturn]] void signalHandler(int Signal, siginfo_t *Siginfo [[maybe_unused]],
-                                void *) noexcept {
+void signalHandler(int Signal, siginfo_t *Siginfo, void *) {
   {
     // Unblock current signal
     sigset_t Set;
@@ -114,7 +113,7 @@ Fault::~Fault() noexcept {
   localHandler = std::exchange(Prev, nullptr);
 }
 
-[[noreturn]] inline void Fault::emitFault(ErrCode Error) {
+[[noreturn]] void Fault::emitFault(ErrCode Error) {
   assuming(localHandler != nullptr);
   longjmp(localHandler->Buffer, static_cast<int>(Error.operator uint32_t()));
 }

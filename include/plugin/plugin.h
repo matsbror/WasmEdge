@@ -23,6 +23,18 @@
 #include <memory>
 #include <vector>
 
+#if WASMEDGE_OS_WINDOWS
+#define WASMEDGE_EXPORT __declspec(dllexport)
+#else
+#define WASMEDGE_EXPORT [[gnu::visibility("default")]]
+#endif
+
+#define EXPORT_GET_DESCRIPTOR(Descriptor)                                      \
+  extern "C" WASMEDGE_EXPORT decltype(&Descriptor) GetDescriptor();            \
+  extern "C" WASMEDGE_EXPORT decltype(&Descriptor) GetDescriptor() {           \
+    return &Descriptor;                                                        \
+  }
+
 namespace WasmEdge {
 namespace Plugin {
 
@@ -88,9 +100,9 @@ public:
   static inline constexpr const uint32_t CurrentAPIVersion [[maybe_unused]] =
       kPluginCurrentAPIVersion;
   static std::vector<std::filesystem::path> getDefaultPluginPaths() noexcept;
-  static bool load(const std::filesystem::path &Path) noexcept;
+  WASMEDGE_EXPORT static bool load(const std::filesystem::path &Path) noexcept;
   static void addPluginOptions(PO::ArgumentParser &Parser) noexcept;
-  static const Plugin *find(std::string_view Name) noexcept;
+  WASMEDGE_EXPORT static const Plugin *find(std::string_view Name) noexcept;
   static Span<const Plugin> plugins() noexcept;
 
   Plugin(const Plugin &) = delete;
@@ -99,6 +111,7 @@ public:
   Plugin &operator=(Plugin &&) noexcept = default;
 
   Plugin() noexcept = default;
+  explicit Plugin(const PluginDescriptor *D) noexcept;
 
   constexpr const char *name() const noexcept {
     assuming(Desc);
@@ -124,33 +137,29 @@ public:
 
   Span<const PluginModule> modules() const noexcept {
     assuming(Desc);
-    return ModuleRegistory;
+    return ModuleRegistry;
   }
 
-  const PluginModule *findModule(std::string_view Name) const noexcept;
+  WASMEDGE_EXPORT const PluginModule *
+  findModule(std::string_view Name) const noexcept;
+
+  std::filesystem::path path() const noexcept { return Path; }
 
 private:
-  static std::vector<Plugin> &PluginRegistory;
-  static std::unordered_map<std::string_view, std::size_t> &PluginNameLookup;
+  static std::vector<Plugin> PluginRegistry;
+  static std::unordered_map<std::string_view, std::size_t> PluginNameLookup;
 
   std::filesystem::path Path;
   const PluginDescriptor *Desc = nullptr;
   std::shared_ptr<Loader::SharedLibrary> Lib;
-  std::vector<PluginModule> ModuleRegistory;
+  std::vector<PluginModule> ModuleRegistry;
   std::unordered_map<std::string_view, std::size_t> ModuleNameLookup;
 
   static bool loadFile(const std::filesystem::path &Path) noexcept;
 
-  explicit Plugin(const PluginDescriptor *D) noexcept;
-
 public:
-  static void registerPlugin(const PluginDescriptor *Desc) noexcept;
-};
-
-struct PluginRegister {
-  PluginRegister(const Plugin::PluginDescriptor *Desc) noexcept;
-
-  ~PluginRegister() noexcept;
+  WASMEDGE_EXPORT static bool
+  registerPlugin(const PluginDescriptor *Desc) noexcept;
 };
 
 } // namespace Plugin

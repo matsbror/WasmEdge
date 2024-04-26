@@ -42,8 +42,7 @@ static inline constexpr auto WasmPhaseStr = []() constexpr {
 #undef UseWasmPhase
   };
   return DenseEnumMap(Array);
-}
-();
+}();
 
 /// Error category C++ enumeration class.
 enum class ErrCategory : uint8_t {
@@ -79,16 +78,17 @@ public:
   constexpr WasmPhase getErrCodePhase() const noexcept {
     return getCategory() != ErrCategory::WASM
                ? WasmPhase::UserDefined
-               : static_cast<WasmPhase>((getCode() & 0xF0U) >> 5);
+               : static_cast<WasmPhase>((getCode() >> 8) & 0x0FU);
   }
 
-  constexpr ErrCode() noexcept : Inner({.Num = 0}) {}
-  constexpr ErrCode(const ErrCode &E) noexcept : Inner({.Num = E.Inner.Num}) {}
-  constexpr ErrCode(const ErrCode::Value E) noexcept : Inner({.Code = E}) {}
+  constexpr ErrCode() noexcept : Inner(0) {}
+  constexpr ErrCode(const ErrCode &E) noexcept : Inner(E.Inner.Num) {}
+  constexpr ErrCode(const ErrCode::Value E) noexcept : Inner(E) {}
   constexpr ErrCode(const uint32_t N) noexcept
-      : Inner({.Num = (N & 0x00FFFFFFU)}) {}
+      : Inner((static_cast<uint32_t>(ErrCategory::UserLevelError) << 24) +
+              (N & 0x00FFFFFFU)) {}
   constexpr ErrCode(const ErrCategory C, const uint32_t N) noexcept
-      : Inner({.Num = (static_cast<uint32_t>(C) << 24) + (N & 0x00FFFFFFU)}) {}
+      : Inner((static_cast<uint32_t>(C) << 24) + (N & 0x00FFFFFFU)) {}
 
   friend constexpr bool operator==(const ErrCode &LHS,
                                    const ErrCode::Value &RHS) noexcept {
@@ -118,7 +118,9 @@ public:
   constexpr operator uint32_t() const noexcept { return Inner.Num; }
 
 private:
-  union {
+  union InnerT {
+    constexpr InnerT(uint32_t Num) : Num(Num) {}
+    constexpr InnerT(ErrCode::Value Code) : Code(Code) {}
     uint32_t Num;
     ErrCode::Value Code;
   } Inner;
@@ -134,8 +136,7 @@ static inline constexpr const auto ErrCodeStr = []() constexpr {
 #undef UseErrCode
   };
   return SpareEnumMap(Array);
-}
-();
+}();
 
 } // namespace WasmEdge
 

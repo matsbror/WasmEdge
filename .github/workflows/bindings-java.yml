@@ -22,8 +22,13 @@ on:
       - "include/api/wasmedge/**"
       - "lib/api/**"
 
+permissions:
+  contents: read
+
 jobs:
   build_ubuntu:
+    permissions:
+      contents: write
     name: Ubuntu 22.04
     runs-on: ${{ matrix.os }}
     strategy:
@@ -33,18 +38,18 @@ jobs:
       image: wasmedge/wasmedge:ubuntu-build-clang
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Ensure git safe directory
         run: |
           git config --global --add safe.directory $(pwd)
 
       - name: Set up Java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
-          distribution: 'temurin' # See 'Supported distributions' for available options
-          java-version: '11'
-          cache: 'gradle'
+          distribution: "temurin" # See 'Supported distributions' for available options
+          java-version: "11"
+          cache: "gradle"
 
       - name: Install clang-format-15
         run: |
@@ -70,17 +75,18 @@ jobs:
           export WasmEdge_ROOT=$(pwd)/build
           cd bindings/java/wasmedge-java
           ./gradlew clean
-          ./gradlew build
+          ./gradlew platformJar
 
-      - name: Upload JNI lib
+      - name: Upload Jar
         uses: actions/upload-artifact@v3
         with:
-          name: jni-libs
+          name: java-libs
           path: |
-            bindings/java/wasmedge-java/build/native/libwasmedge_jni.*
-            bindings/java/wasmedge-java/build/native/wasmedge-version.properties
+            bindings/java/wasmedge-java/build/libs/wasmedge-java-*.jar
 
   build_macos:
+    permissions:
+      contents: write
     name: MacOS
     runs-on: ${{ matrix.os }}
     strategy:
@@ -89,7 +95,7 @@ jobs:
 
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -107,7 +113,6 @@ jobs:
           cmake --build build
 
       - name: Test WasmEdge
-        continue-on-error: true
         run: |
           export DYLD_LIBRARY_PATH="$(pwd)/build/lib/api:$DYLD_LIBRARY_PATH"
           cd build
@@ -116,18 +121,18 @@ jobs:
           cd -
 
       - name: Set up Java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
-          distribution: 'temurin' # See 'Supported distributions' for available options
-          java-version: '11'
-          cache: 'gradle'
+          distribution: "temurin" # See 'Supported distributions' for available options
+          java-version: "11"
+          cache: "gradle"
 
       - name: Build WasmEdge Java
         run: |
           export WasmEdge_ROOT=$(pwd)/build
           cd bindings/java/wasmedge-java
           ./gradlew clean
-          ./gradlew assemble
+          ./gradlew platformJar
 
       - name: Run Tests
         if: ${{ false }}
@@ -139,11 +144,13 @@ jobs:
       - name: Upload JNI lib
         uses: actions/upload-artifact@v3
         with:
-          name: jni-libs
+          name: java-libs
           path: |
-            bindings/java/wasmedge-java/build/native/libwasmedge_jni.*
+            bindings/java/wasmedge-java/build/libs/wasmedge-java-*.jar
 
   build_windows:
+    permissions:
+      contents: write
     name: Windows
     runs-on: windows-2022
     env:
@@ -152,35 +159,35 @@ jobs:
       WASMEDGE_PLUGIN_PATH: ${{ github.workspace }}\build\wasmedge\plugins\wasmedge_process
       LD_LIBRARY_PATH: ${{ github.workspace }}\build\lib\api
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Install dependency
-        uses: crazy-max/ghaction-chocolatey@v2
+        uses: crazy-max/ghaction-chocolatey@v3
         with:
           args: install cmake ninja vswhere
 
-      - uses: GuillaumeFalourd/setup-windows10-sdk-action@v1
+      - uses: GuillaumeFalourd/setup-windows10-sdk-action@v2
         with:
           sdk-version: 19041
 
       - name: Set up java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
-          distribution: 'temurin' # See 'Supported distributions' for available options
-          java-version: '11'
-          cache: 'gradle'
+          distribution: "temurin" # See 'Supported distributions' for available options
+          java-version: "11"
+          cache: "gradle"
 
       - name: Build WasmEdge with Release mode
         run: |
           $vsPath = (vswhere -latest -property installationPath)
           Import-Module (Join-Path $vsPath "Common7\Tools\Microsoft.VisualStudio.DevShell.dll")
           Enter-VsDevShell -VsInstallPath $vsPath -SkipAutomaticLocation -DevCmdArguments "-arch=x64 -host_arch=x64 -winsdk=10.0.19041.0"
-          $llvm = "LLVM-13.0.1-win64.zip"
-          curl -sLO https://github.com/WasmEdge/llvm-windows/releases/download/llvmorg-13.0.1/LLVM-13.0.1-win64.zip -o $llvm
+          $llvm = "LLVM-16.0.6-win64-MultiThreadedDLL.zip"
+          curl -sLO https://github.com/WasmEdge/llvm-windows/releases/download/llvmorg-16.0.6/LLVM-16.0.6-win64-MultiThreadedDLL.zip -o $llvm
           Expand-Archive -Path $llvm
-          $llvm_dir = "$pwd\\LLVM-13.0.1-win64\\LLVM-13.0.1-win64\\lib\\cmake\\llvm"
+          $llvm_dir = "$pwd\\LLVM-16.0.6-win64-MultiThreadedDLL\\LLVM-16.0.6-win64\\lib\\cmake\\llvm"
           $Env:CC = "clang-cl"
           $Env:CXX = "clang-cl"
           $cmake_sys_version = "10.0.19041.0"
@@ -188,7 +195,6 @@ jobs:
           cmake --build build
 
       - name: Test WasmEdge
-        continue-on-error: true
         run: |
           $vsPath = (vswhere -latest -property installationPath)
           Import-Module (Join-Path $vsPath "Common7\Tools\Microsoft.VisualStudio.DevShell.dll")
@@ -206,16 +212,16 @@ jobs:
           $vsPath = (vswhere -latest -property installationPath)
           Import-Module (Join-Path $vsPath "Common7\Tools\Microsoft.VisualStudio.DevShell.dll")
           Enter-VsDevShell -VsInstallPath $vsPath -SkipAutomaticLocation -DevCmdArguments "-arch=x64 -host_arch=x64 -winsdk=10.0.19041.0"
-          $llvm = "LLVM-13.0.1-win64.zip"
-          curl -sLO https://github.com/WasmEdge/llvm-windows/releases/download/llvmorg-13.0.1/LLVM-13.0.1-win64.zip -o $llvm
+          $llvm = "LLVM-16.0.6-win64-MultiThreadedDLL.zip"
+          curl -sLO https://github.com/WasmEdge/llvm-windows/releases/download/llvmorg-16.0.6/LLVM-16.0.6-win64-MultiThreadedDLL.zip -o $llvm
           Expand-Archive -Path $llvm
-          $llvm_dir = "$pwd\\LLVM-13.0.1-win64\\LLVM-13.0.1-win64\\lib\\cmake\\llvm"
+          $llvm_dir = "$pwd\\LLVM-16.0.6-win64-MultiThreadedDLL\\LLVM-16.0.6-win64\\lib\\cmake\\llvm"
           $Env:CC = "clang-cl"
           $Env:CXX = "clang-cl"
           $cmake_sys_version = "10.0.19041.0"
           $Env:PATH += ";$pwd\\build\\lib\\api"
           ./gradlew clean
-          ./gradlew assemble
+          ./gradlew platformJar
 
       - name: Run Tests
         if: ${{ false }}
@@ -230,6 +236,6 @@ jobs:
       - name: Upload JNI lib
         uses: actions/upload-artifact@v3
         with:
-          name: jni-libs
+          name: java-libs
           path: |
-            bindings/java/wasmedge-java/build/native/libwasmedge_jni.*
+            bindings/java/wasmedge-java/build/libs/wasmedge-java-*.jar

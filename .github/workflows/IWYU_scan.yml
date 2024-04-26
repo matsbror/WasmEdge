@@ -13,7 +13,6 @@ on:
       - "include/**"
       - "lib/**"
       - "plugins/**"
-      - "examples/**"
       - "test/**"
       - "thirdparty/**"
       - "tools/**"
@@ -27,20 +26,21 @@ on:
       - "include/**"
       - "lib/**"
       - "plugins/**"
-      - "examples/**"
       - "test/**"
       - "thirdparty/**"
       - "tools/**"
       - "CMakeLists.txt"
 
 jobs:
-  get_version_v2:
+  get_version:
+    permissions:
+      contents: read
     name: Retrieve version information
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.prep.outputs.version }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - name: Ensure git safe directory
@@ -55,8 +55,10 @@ jobs:
         echo "version=$(git describe --match '[0-9].[0-9]*' --tag)" >> $GITHUB_OUTPUT
 
   build_fedora:
+    permissions:
+      contents: write
     name: Fedora latest
-    needs: get_version_v2
+    needs: get_version
     runs-on: ubuntu-latest
     container:
       image: fedora:latest
@@ -74,7 +76,7 @@ jobs:
         make install
         cd ..
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - name: Ensure git safe directory
@@ -93,12 +95,14 @@ jobs:
 
 
   build_macos:
+    permissions:
+      contents: write
     name: macOS
     runs-on: macos-latest
-    needs: get_version_v2
+    needs: get_version
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - name: Ensure git safe directory
@@ -108,6 +112,8 @@ jobs:
     - name: Build and scan WasmEdge with IWYU
       shell: bash
       run: |
+        # Unlink python@3.11 to fix brew link 2to3 conflict.
+        brew unlink python@3.11
         brew install llvm ninja cmake
         export LLVM_DIR="/usr/local/opt/llvm/lib/cmake"
         export Clang_DIR="/usr/local/opt/llvm/lib/cmake/clang"

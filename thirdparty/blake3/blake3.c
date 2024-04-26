@@ -254,7 +254,7 @@ INLINE size_t compress_parents_parallel(const uint8_t *child_chaining_values,
 // As a special case when the SIMD degree is 1, this function will still return
 // at least 2 outputs. This guarantees that this function doesn't perform the
 // root compression. (If it did, it would use the wrong flags, and also we
-// wouldn't be able to implement exendable output.) Note that this function is
+// wouldn't be able to implement extendable output.) Note that this function is
 // not used when the whole input is only 1 chunk long; that's a different
 // codepath.
 //
@@ -427,7 +427,7 @@ INLINE void hasher_merge_cv_stack(blake3_hasher *self, uint64_t total_len) {
 //    of the whole tree, and it would need to be ROOT finalized. We can't
 //    compress it until we know.
 // 2) This 64 KiB input might complete a larger tree, whose root node is
-//    similarly going to be the the root of the whole tree. For example, maybe
+//    similarly going to be the root of the whole tree. For example, maybe
 //    we have 196 KiB (that is, 128 + 64) hashed so far. We can't compress the
 //    node at the root of the 256 KiB subtree until we know how to finalize it.
 //

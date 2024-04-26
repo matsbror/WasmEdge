@@ -19,7 +19,6 @@ on:
       - "include/**"
       - "lib/**"
       - "plugins/**"
-      - "examples/**"
       - "test/**"
       - "thirdparty/**"
       - "tools/**"
@@ -34,20 +33,24 @@ on:
       - "include/**"
       - "lib/**"
       - "plugins/**"
-      - "examples/**"
       - "test/**"
       - "thirdparty/**"
       - "tools/**"
       - "CMakeLists.txt"
       - "cmake/**"
 
+permissions:
+  contents: read
+  
 jobs:
   static_analysis:
+    permissions:
+      contents: write
     name: Run Static Code Analysis using Infer
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Ensure git safe directory
       run: |
         git config --global --add safe.directory $(pwd)

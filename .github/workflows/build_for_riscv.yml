@@ -13,7 +13,6 @@ on:
       - "include/**"
       - "lib/**"
       - "plugins/**"
-      - "examples/**"
       - "test/**"
       - "thirdparty/**"
       - "tools/**"
@@ -28,12 +27,14 @@ on:
       - "include/**"
       - "lib/**"
       - "plugins/**"
-      - "examples/**"
       - "test/**"
       - "thirdparty/**"
       - "tools/**"
       - "CMakeLists.txt"
       - "cmake/**"
+
+permissions:
+  contents: read
 
 jobs:
   # TODO: Refactor `lint` with `on.workflow_run`
@@ -46,7 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: lint
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - name: Ensure git safe directory

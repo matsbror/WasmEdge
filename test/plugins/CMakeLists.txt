@@ -1,10 +1,18 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: 2019-2022 Second State INC
 
+if(WASMEDGE_PLUGIN_FFMPEG)
+  add_subdirectory(wasmedge_ffmpeg)
+endif()
+
 if(WASMEDGE_PLUGIN_PROCESS)
-  if (CMAKE_SYSTEM_NAME MATCHES "Linux")
+  if(CMAKE_SYSTEM_NAME MATCHES "Linux")
     add_subdirectory(wasmedge_process)
   endif()
+endif()
+
+if(WASMEDGE_PLUGIN_ZLIB)
+  add_subdirectory(wasmedge_zlib)
 endif()
 
 if(WASMEDGE_PLUGIN_WASI_NN_BACKEND)
@@ -49,6 +57,8 @@ if(WASMEDGE_PLUGIN_WASI_LOGGING)
   add_subdirectory(wasi_logging)
 endif()
 
-if(CMAKE_SYSTEM_NAME MATCHES "Linux" OR CMAKE_SYSTEM_NAME MATCHES "Darwin")
-  add_subdirectory(unittest)
+if(WASMEDGE_PLUGIN_RUSTLS)
+  add_subdirectory(wasmedge_rustls)
 endif()
+
+add_subdirectory(unittest)

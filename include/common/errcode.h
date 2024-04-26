@@ -21,6 +21,10 @@
 #include <cassert>
 #include <ostream>
 
+#if defined(_MSC_VER) && !defined(__clang__)
+#define __builtin_unreachable() __assume(0)
+#endif
+
 #ifdef NDEBUG
 #define assuming(R)                                                            \
   (static_cast<bool>(R) ? static_cast<void>(0) : __builtin_unreachable())
@@ -61,7 +65,7 @@ struct fmt::formatter<WasmEdge::ErrCode> : fmt::formatter<std::string_view> {
          fmt::format_context &Ctx) const noexcept {
     using namespace std::literals;
     std::string Output =
-        fmt::format("{} failed: {}, Code: 0x{:02x}"sv, Code.getErrCodePhase(),
+        fmt::format("{} failed: {}, Code: 0x{:03x}"sv, Code.getErrCodePhase(),
                     WasmEdge::ErrCodeStr[Code.getEnum()], Code.getCode());
     return formatter<std::string_view>::format(Output, Ctx);
   }

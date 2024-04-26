@@ -148,11 +148,11 @@ struct HandleHolder {
 
   HandleHolder(const HandleHolder &) = delete;
   HandleHolder &operator=(const HandleHolder &) = delete;
-  constexpr HandleHolder(HandleHolder &&RHS) noexcept {
+  HandleHolder(HandleHolder &&RHS) noexcept {
     using std::swap;
     swap(*this, RHS);
   }
-  constexpr HandleHolder &operator=(HandleHolder &&RHS) noexcept {
+  HandleHolder &operator=(HandleHolder &&RHS) noexcept {
     using std::swap;
     swap(*this, RHS);
     return *this;
@@ -247,7 +247,13 @@ public:
   ~FindHolderBase() noexcept { reset(); }
 
   WasiExpect<void> emplace(winapi::HANDLE_ PathHandle) noexcept;
-  void reset() noexcept;
+  void reset() noexcept {
+    Proxy::doReset(static_cast<T &>(*this));
+    Path.clear();
+    Handle = nullptr;
+    Cookie = 0;
+    Buffer.clear();
+  }
   WasiExpect<void> seek(uint64_t NewCookie) noexcept;
   bool next() noexcept;
   WasiExpect<void> loadDirent() noexcept;
@@ -803,8 +809,8 @@ public:
   using HandleHolder::HandleHolder;
 
 private:
-  __wasi_fdflags_t SavedFdFlags;
-  uint8_t SavedVFSFlags;
+  __wasi_fdflags_t SavedFdFlags = {};
+  uint8_t SavedVFSFlags = {};
 
   FindHolder Find;
 #endif

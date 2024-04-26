@@ -10,9 +10,14 @@ on:
         type: boolean
       upload_asset_url:
         type: string
-
+        
+permissions:
+  contents: read
+  
 jobs:
   build_fedora:
+    permissions:
+      contents: write
     name: Fedora latest
     runs-on: ubuntu-latest
     container:
@@ -21,8 +26,9 @@ jobs:
       - name: Install dependency
         run: |
           dnf update -y
-          dnf install -y cmake ninja-build llvm llvm-devel lld-devel clang git file rpm-build dpkg-dev spdlog-devel
-      - uses: actions/checkout@v3
+          dnf install -y cmake ninja-build llvm llvm-devel lld-devel clang git file rpm-build dpkg-dev spdlog-devel \
+            pkgconf-pkg-config protobuf-c-compiler grpc-cpp grpc-plugins grpc-devel
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Grant the safe directory for git
@@ -46,5 +52,5 @@ jobs:
         if: ${{ !inputs.release }}
         uses: actions/upload-artifact@v3
         with:
-          name: WasmEdge-${{ inputs.version }}-fedora35.tar.gz
+          name: WasmEdge-${{ inputs.version }}-fedora.tar.gz
           path: build/WasmEdge-${{ inputs.version }}-Linux.tar.gz

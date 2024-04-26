@@ -164,6 +164,9 @@ def extract_archive(
             for filename in files_extracted:
                 fname = filename.replace(CONST_ipkg, ipath)
 
+                if "._" in filename:
+                    remove(join(to_path, filename))
+                    continue
                 # Skip if it ends with "wasmedge" as it is going to be removed at a later stage
                 if fname.endswith("wasmedge") and not fname.endswith("bin/wasmedge"):
                     continue
@@ -175,7 +178,8 @@ def extract_archive(
                     fname = fname[:-5] + "lib"
                 if fname.startswith("/usr") and "lib64" in fname:
                     fname = fname.replace("lib64", "lib", 1)
-                if "Plugin" in fname:
+
+                if to_path.endswith("Plugins"):
                     if is_default_path(args):
                         fname = fname.replace(
                             join(ipath, CONST_lib_dir, "wasmedge/"), ""
@@ -239,9 +243,13 @@ class VersionString:
         if ignorecase:
             v = v.lower()
         return [
-            int(x)
-            if x.isdigit()
-            else [int(y) if y.isdigit() else y for y in re.findall("\d+|[a-zA-Z]+", x)]
+            (
+                int(x)
+                if x.isdigit()
+                else [
+                    int(y) if y.isdigit() else y for y in re.findall("\d+|[a-zA-Z]+", x)
+                ]
+            )
             for x in re.split(separator, v)
         ]
 
@@ -329,9 +337,13 @@ WASI_NN_OPENVINO = "wasi_nn-openvino"
 WASI_CRYPTO = "wasi_crypto"
 WASI_NN_PYTORCH = "wasi_nn-pytorch"
 WASI_NN_TENSORFLOW_LITE = "wasi_nn-tensorflowlite"
+WASI_NN_GGML = "wasi_nn-ggml"
+WASI_NN_GGML_CUDA = "wasi_nn-ggml-cuda"
+WASI_NN_GGML_BLAS = "wasi_nn-ggml-blas"
 WASMEDGE_TENSORFLOW_PLUGIN = WASMEDGE.lower() + "_" + TENSORFLOW
 WASMEDGE_TENSORFLOW_LITE_PLUGIN = WASMEDGE.lower() + "_" + TENSORFLOW_LITE_P
 WASMEDGE_IMAGE_PLUGIN = WASMEDGE.lower() + "_" + IMAGE
+WASMEDGE_RUSTLS = "wasmedge_rustls"
 WASM_BPF = "wasm_bpf"
 
 PLUGINS_AVAILABLE = [
@@ -339,10 +351,14 @@ PLUGINS_AVAILABLE = [
     WASI_CRYPTO,
     WASI_NN_PYTORCH,
     WASI_NN_TENSORFLOW_LITE,
+    WASI_NN_GGML,
+    WASI_NN_GGML_CUDA,
+    WASI_NN_GGML_BLAS,
     WASMEDGE_TENSORFLOW_PLUGIN,
     WASMEDGE_TENSORFLOW_LITE_PLUGIN,
     WASMEDGE_IMAGE_PLUGIN,
-    WASM_BPF
+    WASMEDGE_RUSTLS,
+    WASM_BPF,
 ]
 
 SUPPORTTED_PLUGINS = {
@@ -352,9 +368,19 @@ SUPPORTTED_PLUGINS = {
     "manylinux2014" + "arm64" + WASI_CRYPTO: VersionString("0.10.1-rc.1"),
     "ubuntu20.04" + "x86_64" + WASI_NN_OPENVINO: VersionString("0.10.1-alpha.1"),
     "ubuntu20.04" + "x86_64" + WASI_NN_PYTORCH: VersionString("0.11.1-alpha.1"),
+    "ubuntu20.04" + "x86_64" + WASI_NN_GGML: VersionString("0.13.4"),
+    "ubuntu20.04" + "aarch64" + WASI_NN_GGML: VersionString("0.13.5"),
+    "ubuntu20.04" + "x86_64" + WASI_NN_GGML_CUDA: VersionString("0.13.4"),
+    "ubuntu20.04" + "aarch64" + WASI_NN_GGML_CUDA: VersionString("0.13.5"),
+    "ubuntu20.04" + "x86_64" + WASI_NN_GGML_BLAS: VersionString("0.13.5"),
+    "ubuntu20.04" + "aarch64" + WASI_NN_GGML_BLAS: VersionString("0.13.5"),
     "manylinux2014" + "x86_64" + WASI_NN_PYTORCH: VersionString("0.11.2-alpha.1"),
     "manylinux2014" + "x86_64" + WASI_NN_TENSORFLOW_LITE: VersionString("0.10.0"),
+    "manylinux2014" + "x86_64" + WASI_NN_GGML: VersionString("0.13.4"),
     "manylinux2014" + "aarch64" + WASI_NN_TENSORFLOW_LITE: VersionString("0.10.0"),
+    "manylinux2014" + "aarch64" + WASI_NN_GGML: VersionString("0.13.4"),
+    "darwin" + "x86_64" + WASI_NN_GGML: VersionString("0.13.4"),
+    "darwin" + "arm64" + WASI_NN_GGML: VersionString("0.13.4"),
     "ubuntu20.04" + "x86_64" + WASI_NN_TENSORFLOW_LITE: VersionString("0.11.2-rc.1"),
     "darwin" + "x86_64" + WASMEDGE_TENSORFLOW_PLUGIN: VersionString("0.13.0"),
     "darwin" + "arm64" + WASMEDGE_TENSORFLOW_PLUGIN: VersionString("0.13.0"),
@@ -375,6 +401,12 @@ SUPPORTTED_PLUGINS = {
     "manylinux2014" + "x86_64" + WASMEDGE_IMAGE_PLUGIN: VersionString("0.13.0"),
     "manylinux2014" + "aarch64" + WASMEDGE_IMAGE_PLUGIN: VersionString("0.13.0"),
     "ubuntu20.04" + "x86_64" + WASMEDGE_IMAGE_PLUGIN: VersionString("0.13.0"),
+    "darwin" + "x86_64" + WASMEDGE_RUSTLS: VersionString("0.13.4"),
+    "darwin" + "arm64" + WASMEDGE_RUSTLS: VersionString("0.13.4"),
+    "manylinux2014" + "aarch64" + WASMEDGE_RUSTLS: VersionString("0.13.5"),
+    "manylinux2014" + "x86_64" + WASMEDGE_RUSTLS: VersionString("0.13.4"),
+    "ubuntu20.04" + "x86_64" + WASMEDGE_RUSTLS: VersionString("0.13.4"),
+    "ubuntu20.04" + "aarch64" + WASMEDGE_RUSTLS: VersionString("0.13.5"),
     "ubuntu20.04" + "x86_64" + WASM_BPF: VersionString("0.13.2"),
     "manylinux2014" + "x86_64" + WASM_BPF: VersionString("0.13.2"),
 }
@@ -392,6 +424,7 @@ CONST_ipkg = None
 CONST_lib_ext = None
 CONST_env_path = None
 CONST_lib_dir = "lib"
+CONST_PATH_NOT_EXIST_STR = "/DOES NOT EXIST;"
 
 try:
     mkdir(TEMP_PATH)
@@ -411,7 +444,7 @@ case :"${1}": in
     *)
         # Prepending path in case a system-installed wasmedge needs to be overridden
         if [ -n "${1}" ]; then
-            export PATH="{0}/bin":$PATH
+            export PATH="{0}/bin:$PATH"
         else
             export PATH="{0}/bin"
         fi
@@ -423,7 +456,7 @@ case :"${2}": in
     *)
         # Prepending path in case a system-installed wasmedge libs needs to be overridden
         if [ -n "${2}" ]; then
-            export {2}="{0}/{6}":${2}
+            export {2}="{0}/{6}:${2}"
         else
             export {2}="{0}/{6}"
         fi
@@ -434,7 +467,7 @@ case :"${3}": in
         ;;
     *)
         if [ -n "${3}" ]; then
-            export LIBRARY_PATH="{0}/{6}":$LIBRARY_PATH
+            export LIBRARY_PATH="{0}/{6}:$LIBRARY_PATH"
         else
             export LIBRARY_PATH="{0}/{6}"
         fi
@@ -445,7 +478,7 @@ case :"${4}": in
         ;;
     *)
         if [ -n "${4}" ]; then
-            export C_INCLUDE_PATH="{0}/include":$C_INCLUDE_PATH
+            export C_INCLUDE_PATH="{0}/include:$C_INCLUDE_PATH"
         else
             export C_INCLUDE_PATH="{0}/include"
         fi
@@ -456,7 +489,7 @@ case :"${5}": in
         ;;
     *)
         if [ -n "${5}" ]; then
-            export CPLUS_INCLUDE_PATH="{0}/include":$CPLUS_INCLUDE_PATH
+            export CPLUS_INCLUDE_PATH="{0}/include:$CPLUS_INCLUDE_PATH"
         else
             export CPLUS_INCLUDE_PATH="{0}/include"
         fi
@@ -600,6 +633,36 @@ def fix_gnu_sparse(args):
                     )
                 if len(listdir(join(args.path, dir, sub_dir))) == 0:
                     shutil.rmtree(join(args.path, dir, sub_dir))
+
+
+def check_nvcc(platform):
+    if platform == "Linux":
+        cmd = "/usr/local/cuda/bin/nvcc --version 2>/dev/null"
+        output = run_shell_command(cmd)
+        logging.debug("%s: %s", cmd, output)
+        if "nvcc: NVIDIA (R) Cuda compiler driver" in output:
+            return True
+        else:
+            logging.info("CUDA cannot be detected via nvcc")
+            return False
+    else:
+        logging.info("CUDA is only supported on Linux")
+    return False
+
+
+def check_nvidia_smi(platform):
+    if platform == "Linux":
+        cmd = "nvidia-smi -q 2>/dev/null | grep CUDA | cut -f2 -d ':'"
+        output = run_shell_command(cmd)
+        logging.debug("%s: %s", cmd, output)
+        if "12" in output:  # Check if CUDA 12.x is installed
+            return True
+        else:
+            logging.info("CUDA 12.x cannot be detected via nvidia-smi")
+            return False
+    else:
+        logging.info("CUDA is only supported on Linux")
+    return False
 
 
 def ldconfig(args, compat):
@@ -1092,11 +1155,45 @@ def install_plugins(args, compat):
 
     if len(args.plugins) >= 1:
         for plugin_name in args.plugins:
+            # Reset the url_root, due to the wasi-nn-ggml plugin with the build number will change the url
+            url_root = "https://github.com/WasmEdge/WasmEdge/releases/download/"
+            url_root += (
+                "$VERSION$/WasmEdge-plugin-$PLUGIN_NAME$-$VERSION$-$DIST$_$ARCH$.tar.gz"
+            )
             plugin_version_supplied = None
+            plugin_wasi_nn_ggml_bypass_check = False
             if plugin_name.find(":") != -1:
                 plugin_name, plugin_version_supplied = plugin_name.split(":")
 
-            if plugin_name not in PLUGINS_AVAILABLE:
+            # Split the WASI-NN-GGML plugin and the others
+            if plugin_name.startswith(WASI_NN_GGML):
+                # Re-write the plugin name if the build number is supplied
+                # E.g. wasi_nn-ggml-b2330, wasi_nn-ggml-cuda-b2330, wasi_nn-ggml-cuda-11-b2330
+                # "https://github.com/second-state/WASI-NN-GGML-PLUGIN-REGISTRY/raw/main/"
+                # "$VERSION$/"
+                # "$BUILD_NUMBER$/"
+                # "WasmEdge-plugin"
+                # "-$PLUGIN_NAME$"
+                # "-$VERSION$"
+                # "-$DIST$"
+                # "_$ARCH$" # ".tar.gz"
+                # If the build number is supplied, bypass the checks
+                plugin_wasi_nn_ggml_bypass_check = True
+                if plugin_name.startswith(WASI_NN_GGML) and "-b" in plugin_name:
+                    [plugin_name, plugin_build_number] = plugin_name.split("-b")
+                    url_root = "https://github.com/second-state/WASI-NN-GGML-PLUGIN-REGISTRY/raw/main/"
+                    url_root += "$VERSION$/b$BUILD_NUMBER$/WasmEdge-plugin-$PLUGIN_NAME$-$VERSION$-$DIST$_$ARCH$.tar.gz"
+                    url_root = url_root.replace("$BUILD_NUMBER$", plugin_build_number)
+
+                # Re-write the plugin name if CUDA is available
+                if plugin_name == WASI_NN_GGML and compat.cuda:
+                    plugin_name = WASI_NN_GGML_CUDA
+
+            # Normal plugin
+            if (
+                plugin_name not in PLUGINS_AVAILABLE
+                and not plugin_wasi_nn_ggml_bypass_check
+            ):
                 logging.error(
                     "%s plugin not found, available names - %s",
                     plugin_name,
@@ -1104,7 +1201,10 @@ def install_plugins(args, compat):
                 )
                 continue
 
-            if compat.dist + compat.machine + plugin_name not in SUPPORTTED_PLUGINS:
+            if (
+                compat.dist + compat.machine + plugin_name not in SUPPORTTED_PLUGINS
+                and not plugin_wasi_nn_ggml_bypass_check
+            ):
                 logging.error(
                     "Plugin not compatible: %s",
                     compat.dist + compat.machine + plugin_name,
@@ -1252,6 +1352,8 @@ def run_shell_command(cmd):
     except subprocess.CalledProcessError as e:
         if "Cannot detect installation path" in str(e.output):
             logging.warning("Uninstaller did not find previous installation")
+        elif "nvcc" in str(e.cmd):
+            logging.debug("Cannot detect CUDA via nvcc")
         else:
             logging.error(
                 "Exception on process - rc= %s output= %s command= %s",
@@ -1309,6 +1411,7 @@ class Compat:
         self.ld_library_path = None
         self.dist = dist_
         self.release_package_wasmedge = None
+        self.cuda = check_nvcc(self.platform) or check_nvidia_smi(self.platform)
 
         if self.platform == "Linux":
             self.install_package_name = "WasmEdge-{0}-Linux".format(self.version)
@@ -1335,21 +1438,34 @@ class Compat:
                     if (
                         VersionString(__platform_dist[1]).compare("20.04") >= 0
                         or VersionString(__lsb_rel).compare("20.04") >= 0
-                    ) and self.machine in ["x86_64", "amd64"]:
-                        self.dist = "ubuntu20.04"
+                    ):
+                        # ARM-based Ubuntu 20.04 is supported after 0.13.5
+                        if self.machine in ["x86_64", "amd64"] or (
+                            self.machine in ["aarch64", "arm64"]
+                            and self.version.compare("0.13.5") >= 0
+                        ):
+                            self.dist = "ubuntu20.04"
+                        else:
+                            self.dist = "manylinux2014"
                     else:
                         self.dist = "manylinux2014"
                 elif sys.version_info[0] == 3:
                     __lsb_rel = run_shell_command(
                         "cat /etc/lsb-release 2>/dev/null | grep RELEASE"
                     )[-5:]
-                    if (
-                        VersionString(__lsb_rel).compare("20.04") >= 0
-                        or "Ubuntu 20.04"
-                        in run_shell_command(
-                            "cat /etc/lsb_release 2>/dev/null | grep DESCRIPTION"
-                        )
-                    ) and self.machine in ["x86_64", "amd64"]:
+                    if VersionString(__lsb_rel).compare(
+                        "20.04"
+                    ) >= 0 or "Ubuntu 20.04" in run_shell_command(
+                        "cat /etc/lsb_release 2>/dev/null | grep DESCRIPTION"
+                    ):
+                        # ARM-based Ubuntu 20.04 is supported after 0.13.5
+                        if self.machine in ["x86_64", "amd64"] or (
+                            self.machine in ["aarch64", "arm64"]
+                            and self.version.compare("0.13.5") >= 0
+                        ):
+                            self.dist = "ubuntu20.04"
+                        else:
+                            self.dist = "manylinux2014"
                         self.dist = "ubuntu20.04"
                     else:
                         self.dist = "manylinux2014"
@@ -1540,8 +1656,6 @@ def main(args):
         logging.info("Installing WasmEdge")
         # Copy the tree
         for sub_dir in listdir(join(TEMP_PATH, CONST_ipkg)):
-            if "._" in sub_dir:
-                continue
             if sub_dir == "lib64":
                 copytree(join(TEMP_PATH, CONST_ipkg, sub_dir), join(args.path, "lib"))
             else:
@@ -1611,7 +1725,18 @@ def main(args):
         # Cleanup
         shutil.rmtree(TEMP_PATH)
 
-        logging.info("Run:\nsource {0}".format(CONST_shell_profile))
+        if CONST_shell_config is None:
+            CONST_shell_config = CONST_PATH_NOT_EXIST_STR
+
+        if CONST_shell_profile is None:
+            CONST_shell_profile = CONST_PATH_NOT_EXIST_STR
+
+        if exists(CONST_shell_config) and compat.platform != "Darwin":
+            logging.info("Run:\nsource {0}".format(CONST_shell_config))
+        elif exists(CONST_shell_profile):
+            logging.info("Run:\nsource {0}".format(CONST_shell_profile))
+        else:
+            logging.info("Please source the env file: %s", join(args.path, "env"))
     else:
         reraise(Exception("Incompatible with your machine\n{0}".format(compat)))
 

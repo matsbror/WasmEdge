@@ -13,7 +13,6 @@ on:
       - "include/**"
       - "lib/**"
       - "plugins/**"
-      - "examples/**"
       - "test/**"
       - "thirdparty/**"
       - "tools/**"
@@ -28,7 +27,6 @@ on:
       - "include/**"
       - "lib/**"
       - "plugins/**"
-      - "examples/**"
       - "test/**"
       - "thirdparty/**"
       - "tools/**"
@@ -46,7 +44,7 @@ jobs:
     needs: lint
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - name: Ensure git safe directory
@@ -111,7 +109,7 @@ jobs:
       with:
         path: ./openwrt-x86-64-generic-rootfs.tar.gz
         key: ${{ steps.restore-openwrt.outputs.cache-primary-key }}
-    - name: Upload artifact (v2)
+    - name: Upload artifact
       uses: actions/upload-artifact@v3
       with:
         name: openwrt-rootfs

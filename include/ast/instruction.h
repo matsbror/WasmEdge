@@ -32,6 +32,10 @@ public:
     uint32_t StackEraseEnd;
     int32_t PCOffset;
   };
+  struct BrCastDescriptor {
+    struct JumpDescriptor Jump;
+    ValType RType1, RType2;
+  };
 
 public:
   /// Constructor assigns the OpCode and the Offset.
@@ -46,10 +50,11 @@ public:
 #endif
     Flags.IsAllocLabelList = false;
     Flags.IsAllocValTypeList = false;
+    Flags.IsAllocBrCast = false;
   }
 
   /// Copy constructor.
-  Instruction(const Instruction &Instr)
+  Instruction(const Instruction &Instr) noexcept
       : Data(Instr.Data), Offset(Instr.Offset), Code(Instr.Code),
         Flags(Instr.Flags) {
     if (Flags.IsAllocLabelList) {
@@ -60,15 +65,18 @@ public:
       Data.SelectT.ValTypeList = new ValType[Data.SelectT.ValTypeListSize];
       std::copy_n(Instr.Data.SelectT.ValTypeList, Data.SelectT.ValTypeListSize,
                   Data.SelectT.ValTypeList);
+    } else if (Flags.IsAllocBrCast) {
+      Data.BrCast = new BrCastDescriptor(*Instr.Data.BrCast);
     }
   }
 
   /// Move constructor.
-  Instruction(Instruction &&Instr)
+  Instruction(Instruction &&Instr) noexcept
       : Data(Instr.Data), Offset(Instr.Offset), Code(Instr.Code),
         Flags(Instr.Flags) {
     Instr.Flags.IsAllocLabelList = false;
     Instr.Flags.IsAllocValTypeList = false;
+    Instr.Flags.IsAllocBrCast = false;
   }
 
   /// Destructor.
@@ -90,8 +98,8 @@ public:
   uint32_t getOffset() const noexcept { return Offset; }
 
   /// Getter and setter of block type.
-  BlockType getBlockType() const noexcept { return Data.Blocks.ResType; }
-  void setBlockType(ValType VType) noexcept {
+  const BlockType &getBlockType() const noexcept { return Data.Blocks.ResType; }
+  void setBlockType(const ValType &VType) noexcept {
     Data.Blocks.ResType.setData(VType);
   }
   void setBlockType(uint32_t Idx) noexcept { Data.Blocks.ResType.setData(Idx); }
@@ -105,9 +113,9 @@ public:
   uint32_t getJumpElse() const noexcept { return Data.Blocks.JumpElse; }
   void setJumpElse(const uint32_t Cnt) noexcept { Data.Blocks.JumpElse = Cnt; }
 
-  /// Getter and setter of reference type.
-  RefType getRefType() const noexcept { return Data.ReferenceType; }
-  void setRefType(RefType RType) noexcept { Data.ReferenceType = RType; }
+  /// Getter and setter of value type.
+  const ValType &getValType() const noexcept { return Data.VType; }
+  void setValType(const ValType &VType) noexcept { Data.VType = VType; }
 
   /// Getter and setter of label list.
   void setLabelListSize(uint32_t Size) {
@@ -198,18 +206,31 @@ public:
 #endif
   }
 
+  /// Getter and setter of BrCast info for Br_cast instructions.
+  void setBrCast(uint32_t LabelIdx) {
+    reset();
+    Data.BrCast = new BrCastDescriptor();
+    Data.BrCast->Jump.TargetIndex = LabelIdx;
+    Flags.IsAllocBrCast = true;
+  }
+  const BrCastDescriptor &getBrCast() const noexcept { return *Data.BrCast; }
+  BrCastDescriptor &getBrCast() noexcept { return *Data.BrCast; }
+
 private:
   /// Release allocated resources.
-  void reset() {
+  void reset() noexcept {
     if (Flags.IsAllocLabelList) {
       Data.BrTable.LabelListSize = 0;
       delete[] Data.BrTable.LabelList;
     } else if (Flags.IsAllocValTypeList) {
       Data.SelectT.ValTypeListSize = 0;
       delete[] Data.SelectT.ValTypeList;
+    } else if (Flags.IsAllocBrCast) {
+      delete Data.BrCast;
     }
     Flags.IsAllocLabelList = false;
     Flags.IsAllocValTypeList = false;
+    Flags.IsAllocBrCast = false;
   }
 
   /// Swap function.
@@ -242,8 +263,8 @@ private:
       uint32_t LabelListSize;
       JumpDescriptor *LabelList;
     } BrTable;
-    // Type 5: RefType.
-    RefType ReferenceType;
+    // Type 5: ValType.
+    ValType VType;
     // Type 6: ValTypeList.
     struct {
       uint32_t ValTypeListSize;
@@ -268,12 +289,15 @@ private:
 #endif
     // Type 9: IsLast.
     bool IsLast;
+    // Type 10: TypeCastBranch.
+    BrCastDescriptor *BrCast;
   } Data;
   uint32_t Offset = 0;
   OpCode Code = OpCode::End;
   struct {
     bool IsAllocLabelList : 1;
     bool IsAllocValTypeList : 1;
+    bool IsAllocBrCast : 1;
   } Flags;
   /// @}
 };

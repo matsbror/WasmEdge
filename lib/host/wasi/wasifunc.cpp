@@ -4,6 +4,7 @@
 #include "host/wasi/wasifunc.h"
 #include "common/filesystem.h"
 #include "common/log.h"
+#include "executor/executor.h"
 #include "host/wasi/environ.h"
 #include "runtime/instance/memory.h"
 
@@ -13,6 +14,10 @@
 #include <numeric>
 #include <type_traits>
 #include <vector>
+
+#if defined(_MSC_VER) && !defined(__clang__)
+#define __restrict__ __restrict
+#endif
 
 namespace WasmEdge {
 namespace Host {
@@ -193,8 +198,18 @@ cast<__wasi_fstflags_t>(uint64_t FdFlags) noexcept {
   const auto Mask = __WASI_FSTFLAGS_ATIM | __WASI_FSTFLAGS_ATIM_NOW |
                     __WASI_FSTFLAGS_MTIM | __WASI_FSTFLAGS_MTIM_NOW;
   if ((WasiRawTypeT<__wasi_fstflags_t>(FdFlags) & ~Mask) == 0) {
-    return static_cast<__wasi_fstflags_t>(FdFlags);
+    const auto WasiFstFlags = static_cast<__wasi_fstflags_t>(FdFlags);
+    if ((WasiFstFlags & __WASI_FSTFLAGS_ATIM) &&
+        (WasiFstFlags & __WASI_FSTFLAGS_ATIM_NOW)) {
+      return WASI::WasiUnexpect(__WASI_ERRNO_INVAL);
+    }
+    if ((WasiFstFlags & __WASI_FSTFLAGS_MTIM) &&
+        (WasiFstFlags & __WASI_FSTFLAGS_MTIM_NOW)) {
+      return WASI::WasiUnexpect(__WASI_ERRNO_INVAL);
+    }
+    return WasiFstFlags;
   }
+
   return WASI::WasiUnexpect(__WASI_ERRNO_INVAL);
 }
 
@@ -265,6 +280,7 @@ cast<__wasi_address_family_t>(uint64_t Family) noexcept {
   switch (WasiRawTypeT<__wasi_address_family_t>(Family)) {
   case __WASI_ADDRESS_FAMILY_INET4:
   case __WASI_ADDRESS_FAMILY_INET6:
+  case __WASI_ADDRESS_FAMILY_AF_UNIX:
     return static_cast<__wasi_address_family_t>(Family);
   default:
     return WASI::WasiUnexpect(__WASI_ERRNO_INVAL);
@@ -343,6 +359,16 @@ private:
   alignas(alignof(T)) uint8_t Storage[sizeof(T[MaxSize])];
 };
 
+bool AllowAFUNIX(const Runtime::CallingFrame &Frame,
+                 __wasi_address_family_t AddressFamily) {
+  if (AddressFamily == __WASI_ADDRESS_FAMILY_AF_UNIX) {
+    return Frame.getExecutor()
+        ->getConfigure()
+        .getRuntimeConfigure()
+        .isAllowAFUNIX();
+  }
+  return true;
+}
 } // namespace
 
 Expect<uint32_t> WasiArgsGet::body(const Runtime::CallingFrame &Frame,
@@ -419,8 +445,8 @@ Expect<uint32_t> WasiEnvironGet::body(const Runtime::CallingFrame &Frame,
   const uint32_t EnvBufSize = calculateBufferSize(EnvironVariables);
 
   // Check for invalid address.
-  const auto Env = MemInst->getSpan<uint8_t_ptr>(EnvPtr, EnvSize);
-  if (unlikely(Env.size() != EnvSize)) {
+  const auto EnvSpan = MemInst->getSpan<uint8_t_ptr>(EnvPtr, EnvSize);
+  if (unlikely(EnvSpan.size() != EnvSize)) {
     return __WASI_ERRNO_FAULT;
   }
   const auto EnvBuf = MemInst->getSpan<uint8_t>(EnvBufPtr, EnvBufSize);
@@ -428,11 +454,11 @@ Expect<uint32_t> WasiEnvironGet::body(const Runtime::CallingFrame &Frame,
     return __WASI_ERRNO_FAULT;
   }
 
-  if (!Env.empty()) {
-    Env[0] = EnvBufPtr;
+  if (!EnvSpan.empty()) {
+    EnvSpan[0] = EnvBufPtr;
   }
 
-  if (auto Res = this->Env.environGet(Env, EnvBuf); unlikely(!Res)) {
+  if (auto Res = this->Env.environGet(EnvSpan, EnvBuf); unlikely(!Res)) {
     return Res.error();
   }
 
@@ -1606,6 +1632,10 @@ Expect<uint32_t> WasiSockOpenV1::body(const Runtime::CallingFrame &Frame,
     WasiAddressFamily = *Res;
   }
 
+  if (!AllowAFUNIX(Frame, WasiAddressFamily)) {
+    return __WASI_ERRNO_NOSYS;
+  }
+
   __wasi_sock_type_t WasiSockType;
   if (auto Res = cast<__wasi_sock_type_t>(SockType); unlikely(!Res)) {
     return Res.error();
@@ -2451,6 +2481,10 @@ Expect<uint32_t> WasiSockOpenV2::body(const Runtime::CallingFrame &Frame,
     return Res.error();
   } else {
     WasiAddressFamily = *Res;
+  }
+
+  if (!AllowAFUNIX(Frame, WasiAddressFamily)) {
+    return __WASI_ERRNO_NOSYS;
   }
 
   __wasi_sock_type_t WasiSockType;

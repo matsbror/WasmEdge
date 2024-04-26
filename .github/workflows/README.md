@@ -23,11 +23,6 @@ flowchart LR
 ```json
 [
   {
-    "name": "MacOS 11 (x86_64)",
-    "runner": "macos-11",
-    "darwin_version": 20
-  },
-  {
     "name": "MacOS 12 (x86_64)",
     "runner": "macos-12",
     "darwin_version": 21
@@ -43,7 +38,7 @@ flowchart LR
     "docker_tag": "manylinux2014_x86_64"
   },
   {
-    "runner": "linux-arm64",
+    "runner": "linux-arm64-v2",
     "docker_tag": "manylinux2014_aarch64"
   }
 ]

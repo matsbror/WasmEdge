@@ -19,6 +19,10 @@
 #include <utility>
 #include <variant>
 
+#if defined(_MSC_VER) && !defined(__clang__)
+#define __builtin_expect(exp, c) (exp)
+#endif
+
 #if defined(__has_feature)
 #if __has_feature(cxx_exceptions)
 #define M_ENABLE_EXCEPTIONS 1
@@ -1611,7 +1615,14 @@ public:
   }
   constexpr const_rvalue_reference_type value() const && {
     if (!has_value()) {
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable:5272)
+#endif
       throw(bad_expected_access<E>(std::move(error())));
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
     }
     return std::move(impl_base::val());
   }
@@ -1623,7 +1634,14 @@ public:
   }
   constexpr rvalue_reference_type value() && {
     if (!has_value()) {
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable:5272)
+#endif
       throw(bad_expected_access<E>(std::move(error())));
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
     }
     return std::move(impl_base::val());
   }

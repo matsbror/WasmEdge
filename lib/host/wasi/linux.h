@@ -25,6 +25,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/uio.h>
+#include <sys/un.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -263,7 +264,7 @@ inline constexpr clockid_t toClockId(__wasi_clockid_t Clock) noexcept {
 
 inline constexpr timespec toTimespec(__wasi_timestamp_t Timestamp) noexcept {
   using namespace std::chrono;
-  const auto Total = nanoseconds(Timestamp);
+  const auto Total = duration<uint64_t, std::nano>(Timestamp);
   const auto Second = duration_cast<seconds>(Total);
   const auto Nano = Total - Second;
   timespec Result{};
@@ -537,6 +538,8 @@ fromAddressFamily(int AddressFamily) noexcept {
     return __WASI_ADDRESS_FAMILY_INET4;
   case PF_INET6:
     return __WASI_ADDRESS_FAMILY_INET6;
+  case PF_UNIX:
+    return __WASI_ADDRESS_FAMILY_AF_UNIX;
   default:
     assumingUnreachable();
   }
@@ -551,6 +554,8 @@ toAddressFamily(__wasi_address_family_t AddressFamily) noexcept {
     return PF_INET;
   case __WASI_ADDRESS_FAMILY_INET6:
     return PF_INET6;
+  case __WASI_ADDRESS_FAMILY_AF_UNIX:
+    return PF_UNIX;
   default:
     assumingUnreachable();
   }

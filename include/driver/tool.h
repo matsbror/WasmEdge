@@ -44,6 +44,7 @@ struct DriverToolOptions {
         Env(PO::Description(
                 "Environ variables. Each variable can be specified as --env `NAME=VALUE`."sv),
             PO::MetaVar("ENVS"sv)),
+        PropAFUNIX(PO::Description("Enable UNIX domain sockets"sv)),
         PropMutGlobals(PO::Description(
             "Disable Import/Export of mutable globals proposal"sv)),
         PropNonTrapF2IConvs(PO::Description(
@@ -59,6 +60,11 @@ struct DriverToolOptions {
         PropTailCall(PO::Description("Enable Tail-call proposal"sv)),
         PropExtendConst(PO::Description("Enable Extended-const proposal"sv)),
         PropThreads(PO::Description("Enable Threads proposal"sv)),
+        PropFunctionReference(
+            PO::Description("Enable Function Reference proposal"sv)),
+        PropGC(PO::Description("Enable GC proposal, this is experimental"sv)),
+        PropComponent(PO::Description(
+            "Enable Component Model proposal, this is experimental"sv)),
         PropAll(PO::Description("Enable all features"sv)),
         ConfEnableInstructionCounting(PO::Description(
             "Enable generating code for counting Wasm instructions executed."sv)),
@@ -68,6 +74,8 @@ struct DriverToolOptions {
             "Enable generating code for counting time during execution."sv)),
         ConfEnableAllStatistics(PO::Description(
             "Enable generating code for all statistics options include instruction counting, gas measuring, and execution time"sv)),
+        ConfEnableJIT(
+            PO::Description("Enable Just-In-Time compiler for running WASM"sv)),
         ConfForceInterpreter(
             PO::Description("Forcibly run WASM in interpreter mode."sv)),
         TimeLim(
@@ -90,6 +98,7 @@ struct DriverToolOptions {
   PO::Option<PO::Toggle> Reactor;
   PO::List<std::string> Dir;
   PO::List<std::string> Env;
+  PO::Option<PO::Toggle> PropAFUNIX;
   PO::Option<PO::Toggle> PropMutGlobals;
   PO::Option<PO::Toggle> PropNonTrapF2IConvs;
   PO::Option<PO::Toggle> PropSignExtendOps;
@@ -101,11 +110,15 @@ struct DriverToolOptions {
   PO::Option<PO::Toggle> PropTailCall;
   PO::Option<PO::Toggle> PropExtendConst;
   PO::Option<PO::Toggle> PropThreads;
+  PO::Option<PO::Toggle> PropFunctionReference;
+  PO::Option<PO::Toggle> PropGC;
+  PO::Option<PO::Toggle> PropComponent;
   PO::Option<PO::Toggle> PropAll;
   PO::Option<PO::Toggle> ConfEnableInstructionCounting;
   PO::Option<PO::Toggle> ConfEnableGasMeasuring;
   PO::Option<PO::Toggle> ConfEnableTimeMeasuring;
   PO::Option<PO::Toggle> ConfEnableAllStatistics;
+  PO::Option<PO::Toggle> ConfEnableJIT;
   PO::Option<PO::Toggle> ConfForceInterpreter;
   PO::Option<uint64_t> TimeLim;
   PO::List<int> GasLim;
@@ -123,6 +136,7 @@ struct DriverToolOptions {
         .add_option("enable-gas-measuring"sv, ConfEnableGasMeasuring)
         .add_option("enable-time-measuring"sv, ConfEnableTimeMeasuring)
         .add_option("enable-all-statistics"sv, ConfEnableAllStatistics)
+        .add_option("enable-jit"sv, ConfEnableJIT)
         .add_option("force-interpreter"sv, ConfForceInterpreter)
         .add_option("disable-import-export-mut-globals"sv, PropMutGlobals)
         .add_option("disable-non-trap-float-to-int"sv, PropNonTrapF2IConvs)
@@ -131,10 +145,14 @@ struct DriverToolOptions {
         .add_option("disable-bulk-memory"sv, PropBulkMemOps)
         .add_option("disable-reference-types"sv, PropRefTypes)
         .add_option("disable-simd"sv, PropSIMD)
+        .add_option("allow-af-unix"sv, PropAFUNIX)
         .add_option("enable-multi-memory"sv, PropMultiMem)
         .add_option("enable-tail-call"sv, PropTailCall)
         .add_option("enable-extended-const"sv, PropExtendConst)
         .add_option("enable-threads"sv, PropThreads)
+        .add_option("enable-function-reference"sv, PropFunctionReference)
+        .add_option("enable-gc"sv, PropGC)
+        .add_option("enable-component"sv, PropComponent)
         .add_option("enable-all"sv, PropAll)
         .add_option("time-limit"sv, TimeLim)
         .add_option("gas-limit"sv, GasLim)
